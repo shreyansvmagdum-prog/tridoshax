@@ -61,7 +61,7 @@ def login(
         "token_type": "bearer"
     }
 
-@router.get("/me")
+@router.get("/m")
 def get_me(current_user: models.User = Depends(get_current_user)):
     return {
         "id": current_user.id,

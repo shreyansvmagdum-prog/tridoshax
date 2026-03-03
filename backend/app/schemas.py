@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from typing import List
+
 
 class UserCreate(BaseModel):
     name: str
@@ -14,5 +16,12 @@ class UserResponse(BaseModel):
     name: str
     email: str
 
-    class Config:
-        from_attributes = True
+class Config:
+    from_attributes = True
+
+class AnswerCreate(BaseModel):
+    question_id: int
+    selected_option: str
+
+class AssessmentCreate(BaseModel):
+    answers: List[AnswerCreate]   
