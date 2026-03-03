@@ -6,6 +6,8 @@ from app.database import get_db
 from app import models, schemas
 from app.scoring_service import calculate_dosha_scores
 from app.models import Result
+from app.recommendation import generate_recommendations
+
 
 
 router = APIRouter(
@@ -77,4 +79,54 @@ def submit_assessment(
             "confidence": result.confidence
         }
     }
+
+@router.get("/dashboard")
+def get_dashboard(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    # 1️⃣ Get latest assessment of user
+    latest_assessment = (
+        db.query(models.Assessment)
+        .filter(models.Assessment.user_id == current_user.id)
+        .order_by(models.Assessment.created_at.desc())
+        .first()
+    )
+
+    if not latest_assessment:
+        return {"message": "No assessment found"}
+
+    # 2️⃣ Get result linked to assessment
+    result = (
+        db.query(models.Result)
+        .filter(models.Result.assessment_id == latest_assessment.id)
+        .first()
+    )
+
+    if not result:
+        return {"message": "Result not found"}
+
+    # 3️⃣ Temporary recommendation logic (we improve later)
+    recommendations = generate_recommendations(result.primary_dosha)
+
+    # 4️⃣ Return full dashboard response
+    return {
+        "user": {
+            "name": current_user.name,
+            "age": current_user.age,
+            "gender": current_user.gender,
+            "height_cm": current_user.height_cm,
+            "weight_kg": current_user.weight_kg
+        },
+        "dosha": {
+            "primary": result.primary_dosha,
+            "secondary": result.secondary_dosha,
+            "vata_score": result.vata_score,
+            "pitta_score": result.pitta_score,
+            "kapha_score": result.kapha_score,
+            "confidence": result.confidence
+        },
+        "recommendations": recommendations
+    }
+
 
