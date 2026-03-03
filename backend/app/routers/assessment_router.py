@@ -7,7 +7,7 @@ from app import models, schemas
 from app.scoring_service import calculate_dosha_scores
 from app.models import Result
 from app.recommendation import generate_recommendations
-
+from app.health_logic import calculate_bmi, generate_disease_risk
 
 
 router = APIRouter(
@@ -109,6 +109,18 @@ def get_dashboard(
     # 3️⃣ Temporary recommendation logic (we improve later)
     recommendations = generate_recommendations(result.primary_dosha)
 
+    # 3.5️⃣ Calculate BMI
+    bmi_value, bmi_category = calculate_bmi(
+    current_user.weight_kg,
+    current_user.height_cm
+    )
+
+    # 3.6️⃣ Generate Disease Risk
+    disease_risk = generate_disease_risk(
+    result.primary_dosha,
+    bmi_category
+    )
+
     # 4️⃣ Return full dashboard response
     return {
         "user": {
@@ -126,7 +138,12 @@ def get_dashboard(
             "kapha_score": result.kapha_score,
             "confidence": result.confidence
         },
-        "recommendations": recommendations
+            "health_metrics": {
+            "bmi": bmi_value,
+            "bmi_category": bmi_category
+        },
+            "disease_risk": disease_risk,
+            "recommendations": recommendations
     }
 
 
