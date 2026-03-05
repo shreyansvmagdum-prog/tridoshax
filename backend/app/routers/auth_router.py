@@ -72,3 +72,40 @@ def get_me(current_user: models.User = Depends(get_current_user)):
         "name": current_user.name,
         "email": current_user.email
     }
+
+@router.put("/update-profile")
+def update_profile(
+    profile_data: schemas.UpdateProfile,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+
+    if profile_data.name is not None:
+        user.name = profile_data.name
+
+    if profile_data.age is not None:
+        user.age = profile_data.age
+
+    if profile_data.gender is not None:
+        user.gender = profile_data.gender
+
+    if profile_data.height_cm is not None:
+        user.height_cm = profile_data.height_cm
+
+    if profile_data.weight_kg is not None:
+        user.weight_kg = profile_data.weight_kg
+
+    db.commit()
+
+    return {
+        "message": "Profile updated successfully",
+        "user": {
+            "name": user.name,
+            "age": user.age,
+            "gender": user.gender,
+            "height_cm": user.height_cm,
+            "weight_kg": user.weight_kg
+        }
+    }

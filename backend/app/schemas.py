@@ -33,3 +33,10 @@ class AnswerCreate(BaseModel):
 
 class AssessmentCreate(BaseModel):
     answers: List[AnswerCreate]   
+
+class UpdateProfile(BaseModel):
+    name: str | None = None
+    age: int | None = None
+    gender: str | None = None
+    height_cm: float | None = None
+    weight_kg: float | None = None
