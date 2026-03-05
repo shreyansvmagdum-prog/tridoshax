@@ -146,4 +146,44 @@ def get_dashboard(
             "recommendations": recommendations
     }
 
+@router.get("/history")
+def get_assessment_history(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    assessments = (
+        db.query(models.Assessment)
+        .filter(models.Assessment.user_id == current_user.id)
+        .order_by(models.Assessment.created_at.desc())
+        .all()
+    )
+
+    history = []
+
+    for assessment in assessments:
+
+        result = (
+            db.query(models.Result)
+            .filter(models.Result.assessment_id == assessment.id)
+            .first()
+        )
+
+        if result:
+            history.append({
+                "assessment_id": assessment.id,
+                "date":  assessment.created_at.strftime("%Y-%m-%d"),
+                "primary_dosha": result.primary_dosha,
+                "secondary_dosha": result.secondary_dosha,
+                "vata_score": result.vata_score,
+                "pitta_score": result.pitta_score,
+                "kapha_score": result.kapha_score,
+                "confidence": result.confidence
+            })
+
+    return {
+        "user": current_user.name,
+        "total_assessments": len(history),
+        "history": history
+    }
 
