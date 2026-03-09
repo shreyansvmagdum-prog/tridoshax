@@ -1,27 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { QUESTIONS } from '../constants';
+import { QUESTIONS, SECTIONS } from '../constants';
 import { Dosha } from '../types';
-import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid } from 'lucide-react';
 
 export const QuestionnairePage = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, Dosha>>({});
   const navigate = useNavigate();
 
-  const totalQuestions = QUESTIONS.length;
-  const progress = ((currentStep + 1) / totalQuestions) * 100;
+  // Find current section and its progress
+  const currentQuestion = QUESTIONS[currentQuestionIndex];
+  const currentSectionIndex = SECTIONS.findIndex(s => s.questionIds.includes(currentQuestion.id));
+  const currentSection = SECTIONS[currentSectionIndex];
+  
+  const sectionQuestions = useMemo(() => 
+    QUESTIONS.filter(q => currentSection.questionIds.includes(q.id)),
+    [currentSection]
+  );
+  
+  const questionIndexInSection = sectionQuestions.findIndex(q => q.id === currentQuestion.id);
+  
+  const overallProgress = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100;
+  const sectionProgress = ((questionIndexInSection + 1) / sectionQuestions.length) * 100;
 
   const handleOptionSelect = (questionId: number, value: Dosha) => {
     setAnswers({ ...answers, [questionId]: value });
   };
 
   const handleNext = () => {
-    if (currentStep < totalQuestions - 1) {
-      setCurrentStep(currentStep + 1);
+    if (currentQuestionIndex < QUESTIONS.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      // Calculate results and navigate
+      // Calculate results
       const counts: Record<Dosha, number> = { Vata: 0, Pitta: 0, Kapha: 0 };
       (Object.values(answers) as Dosha[]).forEach((val) => {
         counts[val]++;
@@ -36,61 +48,92 @@ export const QuestionnairePage = () => {
         }
       };
       
-      // In a real app, we'd save this to a database
       localStorage.setItem('lastAssessment', JSON.stringify(result));
       navigate('/dashboard');
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 
-  const currentQuestion = QUESTIONS[currentStep];
   const isAnswered = !!answers[currentQuestion.id];
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-semibold text-primary">Question {currentStep + 1} of {totalQuestions}</span>
-          <span className="text-sm font-medium text-slate-500">{Math.round(progress)}% Complete</span>
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      {/* Progress Section */}
+      <div className="mb-10 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider mb-1">
+              <LayoutGrid className="h-4 w-4" />
+              Section {currentSectionIndex + 1} of {SECTIONS.length}
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900">{currentSection.title}</h1>
+          </div>
+          <div className="text-right">
+            <span className="text-sm font-semibold text-slate-500">
+              Question {questionIndexInSection + 1} of {sectionQuestions.length}
+            </span>
+          </div>
         </div>
-        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            className="bg-primary h-full"
-          />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
+              <span>Section Progress</span>
+              <span>{Math.round(sectionProgress)}%</span>
+            </div>
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${sectionProgress}%` }}
+                className="bg-primary h-full"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
+              <span>Overall Progress</span>
+              <span>{Math.round(overallProgress)}%</span>
+            </div>
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${overallProgress}%` }}
+                className="bg-primary/40 h-full"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
+          key={currentQuestion.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
           className="glass-card p-8 md:p-12"
         >
-          <h2 className="text-2xl font-bold text-slate-900 mb-8 leading-tight">
+          <h2 className="text-2xl font-bold text-slate-900 mb-10 leading-tight">
             {currentQuestion.text}
           </h2>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {currentQuestion.options.map((option, idx) => (
               <button
                 key={idx}
                 onClick={() => handleOptionSelect(currentQuestion.id, option.value)}
-                className={`w-full text-left p-5 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                className={`w-full text-left p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${
                   answers[currentQuestion.id] === option.value
                     ? 'border-primary bg-primary/5 ring-1 ring-primary'
                     : 'border-slate-100 hover:border-primary/30 hover:bg-slate-50'
                 }`}
               >
-                <span className={`text-lg ${answers[currentQuestion.id] === option.value ? 'text-primary font-semibold' : 'text-slate-700'}`}>
+                <span className={`text-lg ${answers[currentQuestion.id] === option.value ? 'text-primary font-bold' : 'text-slate-700 font-medium'}`}>
                   {option.label}
                 </span>
                 {answers[currentQuestion.id] === option.value && (
@@ -100,12 +143,12 @@ export const QuestionnairePage = () => {
             ))}
           </div>
 
-          <div className="flex justify-between mt-12">
+          <div className="flex flex-col sm:flex-row justify-between mt-12 gap-4">
             <button
               onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className={`flex items-center px-6 py-3 rounded-xl font-semibold transition-all ${
-                currentStep === 0 
+              disabled={currentQuestionIndex === 0}
+              className={`flex items-center justify-center px-8 py-4 rounded-xl font-bold transition-all ${
+                currentQuestionIndex === 0 
                   ? 'text-slate-300 cursor-not-allowed' 
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -115,13 +158,13 @@ export const QuestionnairePage = () => {
             <button
               onClick={handleNext}
               disabled={!isAnswered}
-              className={`flex items-center px-8 py-3 rounded-xl font-semibold transition-all ${
+              className={`flex items-center justify-center px-10 py-4 rounded-xl font-bold transition-all ${
                 !isAnswered
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-primary text-white shadow-lg hover:shadow-primary/20 hover:scale-[1.02]'
+                  : 'bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02]'
               }`}
             >
-              {currentStep === totalQuestions - 1 ? 'Finish Assessment' : 'Next Question'}
+              {currentQuestionIndex === QUESTIONS.length - 1 ? 'Submit Assessment' : 'Next Question'}
               <ChevronRight className="ml-2 h-5 w-5" />
             </button>
           </div>

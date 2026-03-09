@@ -65,6 +65,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ type }) => {
                 placeholder="Password"
               />
             </div>
+            {type === 'login' && (
+              <div className="flex justify-end">
+                <Link to="/forgot-password" size="sm" className="text-xs font-bold text-primary hover:underline">
+                  Forgot Password?
+                </Link>
+              </div>
+            )}
           </div>
 
           <div>
