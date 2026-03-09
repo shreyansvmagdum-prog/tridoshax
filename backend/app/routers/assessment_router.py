@@ -8,6 +8,7 @@ from app.scoring_service import calculate_dosha_scores
 from app.models import Result
 from app.recommendation import generate_recommendations
 from app.health_logic import calculate_bmi, generate_disease_risk
+from app.ml_model import predict_dosha, dosha_name
 
 
 router = APIRouter(
@@ -49,6 +50,21 @@ def submit_assessment(
 
     db.commit()
 
+    # 3️⃣ Prepare ML Features
+    mapping = {
+        "A": 0,
+        "B": 1,
+        "C": 2
+    }
+
+    features = []
+
+    for ans in saved_answers:
+        features.append(mapping.get(ans.selected_option))
+
+    prediction = predict_dosha(features)
+    ml_primary_dosha = dosha_name(prediction)
+
     # 3️⃣ Calculate Dosha Scores
     scores = calculate_dosha_scores(saved_answers)
 
@@ -58,7 +74,7 @@ def submit_assessment(
         vata_score=scores["vata"],
         pitta_score=scores["pitta"],
         kapha_score=scores["kapha"],
-        primary_dosha=scores["primary"],
+        primary_dosha= ml_primary_dosha,
         secondary_dosha=scores["secondary"],
         confidence=scores["confidence"]
     )
