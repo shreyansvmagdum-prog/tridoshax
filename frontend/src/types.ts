@@ -1,5 +1,11 @@
 export type Dosha = 'Vata' | 'Pitta' | 'Kapha';
 
+export interface Section {
+  id: string;
+  title: string;
+  questionIds: number[];
+}
+
 export interface Question {
   id: number;
   text: string;

@@ -1,4 +1,12 @@
-import { Question } from './types';
+import { Question, Section } from './types';
+
+export const SECTIONS: Section[] = [
+  { id: 'A', title: 'Physical Constitution', questionIds: [1, 2, 3, 12, 17] },
+  { id: 'B', title: 'Digestion & Metabolism', questionIds: [4, 14, 18, 24] },
+  { id: 'C', title: 'Energy & Activity', questionIds: [8, 10, 25] },
+  { id: 'D', title: 'Mental & Emotional Traits', questionIds: [7, 9, 21, 22] },
+  { id: 'E', title: 'Sleep & Recovery', questionIds: [6, 13] }
+];
 
 export const QUESTIONS: Question[] = [
   {
