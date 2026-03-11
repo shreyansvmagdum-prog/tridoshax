@@ -23,4 +23,4 @@ def dosha_name(prediction):
         2: "Kapha"
     }
 
-    return mapping.get(prediction, "Unknown")
+    return mapping.get(prediction, "Unknown") 

@@ -10,11 +10,31 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem('lastAssessment');
+
     if (saved) {
-      setResult(JSON.parse(saved));
+      const raw = JSON.parse(saved);
+
+      // 🔥 Convert backend format → dashboard format
+      const formatted = {
+        scores: {
+          Vata: raw.vata_score,
+          Pitta: raw.pitta_score,
+          Kapha: raw.kapha_score
+        },
+        primary: raw.primary_dosha,
+        secondary: raw.secondary_dosha,
+        confidence: raw.confidence
+      };
+
+      setResult(formatted);
+
     } else {
+      // fallback demo data
       setResult({
-        scores: { Vata: 45, Pitta: 35, Kapha: 20 }
+        scores: { Vata: 45, Pitta: 35, Kapha: 20 },
+        primary: "Vata",
+        secondary: "Pitta",
+        confidence: 45
       });
     }
   }, []);
@@ -24,11 +44,11 @@ export const DashboardPage = () => {
   const scores = result.scores;
   const sortedDoshas = Object.entries(scores)
     .sort(([, a], [, b]) => (b as number) - (a as number)) as [Dosha, number][];
-  
+
   const dominantDosha = sortedDoshas[0][0];
   const secondaryDosha = sortedDoshas[1][0];
   const confidence = sortedDoshas[0][1];
-  
+
   const info = DOSHA_INFO[dominantDosha];
 
   const chartData = [
@@ -107,10 +127,10 @@ export const DashboardPage = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Legend verticalAlign="bottom" height={36}/>
+                  <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -143,10 +163,9 @@ export const DashboardPage = () => {
                   </span>
                 </div>
                 <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                  <div className={`h-full ${
-                    item.risk === 'High' ? 'bg-red-500 w-full' : 
-                    item.risk === 'Medium' ? 'bg-orange-500 w-2/3' : 'bg-green-500 w-1/3'
-                  }`} />
+                  <div className={`h-full ${item.risk === 'High' ? 'bg-red-500 w-full' :
+                      item.risk === 'Medium' ? 'bg-orange-500 w-2/3' : 'bg-green-500 w-1/3'
+                    }`} />
                 </div>
               </div>
             ))}
