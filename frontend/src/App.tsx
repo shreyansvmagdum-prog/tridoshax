@@ -8,22 +8,73 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AIAssistant } from './components/AIAssistant';
 
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { PublicRoute } from "./components/PublicRoute";
+
 export default function App() {
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
         <Navbar />
+
         <main className="flex-grow">
           <Routes>
+
+            {/* Public */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<AuthPage type="login" />} />
-            <Route path="/register" element={<AuthPage type="register" />} />
+
+            {/* Auth pages */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <AuthPage type="login" />
+                </PublicRoute>
+              }
+            />
+
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <AuthPage type="register" />
+                </PublicRoute>
+              }
+            />
+
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/assessment" element={<QuestionnairePage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+
+            {/* Protected pages */}
+            <Route
+              path="/assessment"
+              element={
+                <ProtectedRoute>
+                  <QuestionnairePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
           </Routes>
         </main>
+
         <Footer />
         <AIAssistant />
       </div>

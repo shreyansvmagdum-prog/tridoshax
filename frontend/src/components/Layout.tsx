@@ -2,17 +2,31 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Leaf, User, LogOut, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { isAuthenticated, logout } from "../utils/auth";
+import { useNavigate } from "react-router-dom";
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
 
+  const navigate = useNavigate();
+  const loggedIn = isAuthenticated();
+
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Assessment', path: '/assessment' },
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Profile', path: '/profile' },
+    ...(loggedIn
+      ? [
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'Profile', path: '/profile' }
+      ]
+      : []),
   ];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");   // go to home after logout
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-primary/10">
@@ -31,16 +45,24 @@ export const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === link.path ? 'text-primary' : 'text-slate-600'
-                }`}
+                className={`text-sm font-medium transition-colors hover:text-primary ${location.pathname === link.path ? 'text-primary' : 'text-slate-600'
+                  }`}
               >
                 {link.name}
               </Link>
             ))}
-            <Link to="/login" className="btn-primary py-1.5 px-4 text-sm">
-              Login
-            </Link>
+            {!loggedIn ? (
+              <Link to="/login" className="btn-primary py-1.5 px-4 text-sm">
+                Login
+              </Link>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="btn-primary py-1.5 px-4 text-sm bg-red-500 hover:bg-red-600"
+              >
+                Logout
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -75,13 +97,25 @@ export const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              <Link
-                to="/login"
-                onClick={() => setIsOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-primary/5"
-              >
-                Login
-              </Link>
+              {!loggedIn ? (
+                <Link
+                  to="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-primary/5"
+                >
+                  Login
+                </Link>
+              ) : (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-500 hover:bg-red-50"
+                >
+                  Logout
+                </button>
+              )}
             </div>
           </motion.div>
         )}
