@@ -33,13 +33,11 @@ def get_questionnaire():
 @router.post("/submit")
 def submit_assessment(
     assessment_data: schemas.AssessmentCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)   # ⭐ AUTH ENABLED
 ):
-    # TEMP: No login → guest user
-    user_id = None
-
-    # 1️⃣ Create Assessment
-    new_assessment = models.Assessment(user_id=user_id)
+    # 1️⃣ Create Assessment linked to logged-in user
+    new_assessment = models.Assessment(user_id=current_user.id)
     db.add(new_assessment)
     db.commit()
     db.refresh(new_assessment)
@@ -60,7 +58,6 @@ def submit_assessment(
 
     # 3️⃣ Prepare ML Features
     mapping = {"A": 0, "B": 1, "C": 2}
-
     features = [mapping.get(ans.selected_option) for ans in saved_answers]
 
     prediction = predict_dosha(features)
