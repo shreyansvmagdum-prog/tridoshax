@@ -1,55 +1,126 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
-import { QUESTIONS, SECTIONS } from '../constants';
-import { Dosha } from '../types';
-import { ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { Dosha } from "../types";
+import { ChevronLeft, ChevronRight, CheckCircle2, LayoutGrid } from "lucide-react";
+import { getQuestionnaire, submitAssessment } from "../services/api";
 
 export const QuestionnairePage = () => {
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, Dosha>>({});
   const navigate = useNavigate();
 
-  // Find current section and its progress
-  const currentQuestion = QUESTIONS[currentQuestionIndex];
-  const currentSectionIndex = SECTIONS.findIndex(s => s.questionIds.includes(currentQuestion.id));
-  const currentSection = SECTIONS[currentSectionIndex];
-  
-  const sectionQuestions = useMemo(() => 
-    QUESTIONS.filter(q => currentSection.questionIds.includes(q.id)),
-    [currentSection]
-  );
-  
-  const questionIndexInSection = sectionQuestions.findIndex(q => q.id === currentQuestion.id);
-  
-  const overallProgress = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100;
-  const sectionProgress = ((questionIndexInSection + 1) / sectionQuestions.length) * 100;
+  // 🔥 FETCH FROM BACKEND
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const data = await getQuestionnaire();
+
+        if (!data?.sections) return;
+
+        const allQuestions: any[] = [];
+        const formattedSections: any[] = [];
+
+        data.sections.forEach((sec: any) => {
+          const questionIds: number[] = [];
+
+          sec.questions.forEach((q: any) => {
+            allQuestions.push({
+              id: q.id,
+              text: q.question,
+              options: q.options.map((opt: any) => ({
+                label: opt.text,
+                value: opt.key,
+              })),
+            });
+
+            questionIds.push(q.id);
+          });
+
+          formattedSections.push({
+            id: sec.section_id,
+            title: sec.section_title,
+            questionIds,
+          });
+        });
+
+        setQuestions(allQuestions);
+        setSections(formattedSections);
+      } catch (err) {
+        console.error("Failed to load questionnaire", err);
+      }
+    };
+
+    fetchQuestions();
+  }, []);
+
+  // ✅ SAFE CURRENT QUESTION
+  const currentQuestion = questions[currentQuestionIndex] || null;
+
+  // ✅ SAFE CURRENT SECTION
+  const currentSectionIndex =
+    currentQuestion && sections.length
+      ? sections.findIndex((s) => s.questionIds.includes(currentQuestion.id))
+      : 0;
+
+  const currentSection = sections[currentSectionIndex] || null;
+
+  // ✅ QUESTIONS IN CURRENT SECTION
+  const sectionQuestions = useMemo(() => {
+    if (!currentSection) return [];
+
+    return questions.filter((q) =>
+      currentSection.questionIds.includes(q.id)
+    );
+  }, [currentSection, questions]);
+
+  // ✅ SAFE PROGRESS CALCULATIONS
+  const questionIndexInSection =
+    currentQuestion && sectionQuestions.length
+      ? sectionQuestions.findIndex((q) => q.id === currentQuestion.id)
+      : 0;
+
+  const overallProgress =
+    questions.length > 0
+      ? ((currentQuestionIndex + 1) / questions.length) * 100
+      : 0;
+
+  const sectionProgress =
+    sectionQuestions.length > 0
+      ? ((questionIndexInSection + 1) / sectionQuestions.length) * 100
+      : 0;
 
   const handleOptionSelect = (questionId: number, value: Dosha) => {
     setAnswers({ ...answers, [questionId]: value });
   };
 
-  const handleNext = () => {
-    if (currentQuestionIndex < QUESTIONS.length - 1) {
+  const handleNext = async () => {
+    if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      // Calculate results
-      const counts: Record<Dosha, number> = { Vata: 0, Pitta: 0, Kapha: 0 };
-      (Object.values(answers) as Dosha[]).forEach((val) => {
-        counts[val]++;
-      });
-      
-      const total = Object.values(answers).length;
-      const result = {
-        scores: {
-          Vata: Math.round((counts.Vata / total) * 100),
-          Pitta: Math.round((counts.Pitta / total) * 100),
-          Kapha: Math.round((counts.Kapha / total) * 100),
-        }
-      };
-      
-      localStorage.setItem('lastAssessment', JSON.stringify(result));
-      navigate('/dashboard');
+      try {
+        const formattedAnswers = Object.entries(answers).map(
+          ([question_id, selected_option]) => ({
+            question_id: Number(question_id),
+            selected_option,
+          })
+        );
+
+        const response = await submitAssessment({
+          answers: formattedAnswers,
+        });
+
+        localStorage.setItem(
+          "lastAssessment",
+          JSON.stringify(response.result)
+        );
+
+        navigate("/dashboard");
+      } catch (error) {
+        console.error("Assessment submission failed:", error);
+      }
     }
   };
 
@@ -59,7 +130,18 @@ export const QuestionnairePage = () => {
     }
   };
 
-  const isAnswered = !!answers[currentQuestion.id];
+  const isAnswered = currentQuestion
+    ? !!answers[currentQuestion.id]
+    : false;
+
+  // ⭐⭐⭐ LOADING UI (SAFE — NO HOOK BREAK)
+  if (!currentQuestion || !currentSection) {
+    return (
+      <div className="text-center mt-20">
+        Loading questionnaire...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
@@ -69,10 +151,13 @@ export const QuestionnairePage = () => {
           <div>
             <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider mb-1">
               <LayoutGrid className="h-4 w-4" />
-              Section {currentSectionIndex + 1} of {SECTIONS.length}
+              Section {currentSectionIndex + 1} of {sections.length}
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">{currentSection.title}</h1>
+            <h1 className="text-3xl font-bold text-slate-900">
+              {currentSection.title}
+            </h1>
           </div>
+
           <div className="text-right">
             <span className="text-sm font-semibold text-slate-500">
               Question {questionIndexInSection + 1} of {sectionQuestions.length}
@@ -80,27 +165,33 @@ export const QuestionnairePage = () => {
           </div>
         </div>
 
+        {/* Progress Bars */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Section Progress */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
               <span>Section Progress</span>
               <span>{Math.round(sectionProgress)}%</span>
             </div>
+
             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <motion.div 
+              <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${sectionProgress}%` }}
                 className="bg-primary h-full"
               />
             </div>
           </div>
+
+          {/* Overall Progress */}
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-bold text-slate-400 uppercase">
               <span>Overall Progress</span>
               <span>{Math.round(overallProgress)}%</span>
             </div>
+
             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <motion.div 
+              <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${overallProgress}%` }}
                 className="bg-primary/40 h-full"
@@ -110,6 +201,7 @@ export const QuestionnairePage = () => {
         </div>
       </div>
 
+      {/* Question Card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentQuestion.id}
@@ -122,20 +214,22 @@ export const QuestionnairePage = () => {
             {currentQuestion.text}
           </h2>
 
+          {/* Options */}
           <div className="grid grid-cols-1 gap-4">
-            {currentQuestion.options.map((option, idx) => (
+            {currentQuestion.options.map((option: any, idx: number) => (
               <button
                 key={idx}
-                onClick={() => handleOptionSelect(currentQuestion.id, option.value)}
-                className={`w-full text-left p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${
+                onClick={() =>
+                  handleOptionSelect(currentQuestion.id, option.value)
+                }
+                className={`w-full text-left p-6 rounded-2xl border-2 transition-all flex items-center justify-between ${
                   answers[currentQuestion.id] === option.value
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                    : 'border-slate-100 hover:border-primary/30 hover:bg-slate-50'
+                    ? "border-primary bg-primary/5"
+                    : "border-slate-100 hover:border-primary/30"
                 }`}
               >
-                <span className={`text-lg ${answers[currentQuestion.id] === option.value ? 'text-primary font-bold' : 'text-slate-700 font-medium'}`}>
-                  {option.label}
-                </span>
+                <span className="text-lg">{option.label}</span>
+
                 {answers[currentQuestion.id] === option.value && (
                   <CheckCircle2 className="h-6 w-6 text-primary" />
                 )}
@@ -143,29 +237,25 @@ export const QuestionnairePage = () => {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between mt-12 gap-4">
+          {/* Navigation */}
+          <div className="flex justify-between mt-12">
             <button
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0}
-              className={`flex items-center justify-center px-8 py-4 rounded-xl font-bold transition-all ${
-                currentQuestionIndex === 0 
-                  ? 'text-slate-300 cursor-not-allowed' 
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
+              className="text-slate-600"
             >
-              <ChevronLeft className="mr-2 h-5 w-5" /> Previous
+              <ChevronLeft /> Previous
             </button>
+
             <button
               onClick={handleNext}
               disabled={!isAnswered}
-              className={`flex items-center justify-center px-10 py-4 rounded-xl font-bold transition-all ${
-                !isAnswered
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02]'
-              }`}
+              className="bg-primary text-white px-6 py-3 rounded-xl"
             >
-              {currentQuestionIndex === QUESTIONS.length - 1 ? 'Submit Assessment' : 'Next Question'}
-              <ChevronRight className="ml-2 h-5 w-5" />
+              {currentQuestionIndex === questions.length - 1
+                ? "Submit Assessment"
+                : "Next Question"}
+              <ChevronRight />
             </button>
           </div>
         </motion.div>

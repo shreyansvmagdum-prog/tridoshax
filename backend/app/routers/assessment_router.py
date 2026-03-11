@@ -22,16 +22,24 @@ def get_questions(current_user: models.User = Depends(get_current_user)):
 
 router = APIRouter(prefix="/assessment", tags=["Assessment"])
 
+from app.questionnaire_config import QUESTIONNAIRE
 
+@router.get("/questionnaire")
+def get_questionnaire():
+    return {
+        "sections": QUESTIONNAIRE
+    }
 
 @router.post("/submit")
 def submit_assessment(
     assessment_data: schemas.AssessmentCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
+    # TEMP: No login → guest user
+    user_id = None
+
     # 1️⃣ Create Assessment
-    new_assessment = models.Assessment(user_id=current_user.id)
+    new_assessment = models.Assessment(user_id=user_id)
     db.add(new_assessment)
     db.commit()
     db.refresh(new_assessment)
@@ -51,30 +59,23 @@ def submit_assessment(
     db.commit()
 
     # 3️⃣ Prepare ML Features
-    mapping = {
-        "A": 0,
-        "B": 1,
-        "C": 2
-    }
+    mapping = {"A": 0, "B": 1, "C": 2}
 
-    features = []
-
-    for ans in saved_answers:
-        features.append(mapping.get(ans.selected_option))
+    features = [mapping.get(ans.selected_option) for ans in saved_answers]
 
     prediction = predict_dosha(features)
     ml_primary_dosha = dosha_name(prediction)
 
-    # 3️⃣ Calculate Dosha Scores
+    # 4️⃣ Calculate Dosha Scores
     scores = calculate_dosha_scores(saved_answers)
 
-    # 4️⃣ Store Result in DB
+    # 5️⃣ Store Result in DB
     result = models.Result(
         assessment_id=new_assessment.id,
         vata_score=scores["vata"],
         pitta_score=scores["pitta"],
         kapha_score=scores["kapha"],
-        primary_dosha= ml_primary_dosha,
+        primary_dosha=ml_primary_dosha,
         secondary_dosha=scores["secondary"],
         confidence=scores["confidence"]
     )
@@ -83,7 +84,7 @@ def submit_assessment(
     db.commit()
     db.refresh(result)
 
-    # 5️⃣ Return Full Response
+    # 6️⃣ Return Response
     return {
         "message": "Assessment submitted successfully",
         "result": {
