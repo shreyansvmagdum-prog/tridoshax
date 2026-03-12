@@ -79,3 +79,8 @@ export const getLatestResult = async () => {
   const response = await API.get("/assessment/dashboard");
   return response.data;
 };
+
+export const updateProfile = async (data: any) => {
+  const response = await API.put("/auth/update-profile", data);
+  return response.data;
+};

@@ -70,7 +70,11 @@ def get_me(current_user: models.User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "name": current_user.name,
-        "email": current_user.email
+        "email": current_user.email,
+        "age": current_user.age,
+        "gender": current_user.gender,
+        "height_cm": current_user.height_cm,
+        "weight_kg": current_user.weight_kg
     }
 
 @router.put("/update-profile")
