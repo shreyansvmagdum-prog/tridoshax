@@ -5,18 +5,41 @@ import { DOSHA_INFO } from '../constants';
 import { Dosha } from '../types';
 import { AlertCircle, CheckCircle, Info, Utensils, Sparkles, Heart } from 'lucide-react';
 import { getLatestResult } from '../services/api';
+import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export const DashboardPage = () => {
   const [result, setResult] = useState<any>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+
+    const selectedAssessment = location.state?.assessment;
+
+    // ⭐ If user came from history
+    if (selectedAssessment) {
+
+      const formatted = {
+        scores: {
+          Vata: selectedAssessment.vata_score,
+          Pitta: selectedAssessment.pitta_score,
+          Kapha: selectedAssessment.kapha_score
+        },
+        primary: selectedAssessment.primary_dosha,
+        secondary: selectedAssessment.secondary_dosha,
+        confidence: selectedAssessment.confidence
+      };
+
+      setResult(formatted);
+      return;
+    }
+
+    // ⭐ Otherwise load latest result
     const fetchDashboard = async () => {
       try {
         const data = await getLatestResult();
-
-        console.log("Dashboard API:", data);
-
-        const d = data.dosha;   // 👈 IMPORTANT
+        const d = data.dosha;
 
         const formatted = {
           scores: {
@@ -26,13 +49,7 @@ export const DashboardPage = () => {
           },
           primary: d.primary,
           secondary: d.secondary,
-
-          // Backend has no confidence → calculate
-          confidence: Math.max(
-            d.vata_score,
-            d.pitta_score,
-            d.kapha_score
-          )
+          confidence: d.confidence
         };
 
         setResult(formatted);
@@ -43,17 +60,15 @@ export const DashboardPage = () => {
     };
 
     fetchDashboard();
-  }, []);
 
+  }, [location.state]);
+  
   if (!result) return null;
 
   const scores = result.scores;
-  const sortedDoshas = Object.entries(scores)
-    .sort(([, a], [, b]) => (b as number) - (a as number)) as [Dosha, number][];
-
-  const dominantDosha = sortedDoshas[0][0];
-  const secondaryDosha = sortedDoshas[1][0];
-  const confidence = sortedDoshas[0][1];
+  const dominantDosha = result.primary as Dosha;
+  const secondaryDosha = result.secondary as Dosha;
+  const confidence = result.confidence;
 
   const info = DOSHA_INFO[dominantDosha];
 
@@ -80,7 +95,12 @@ export const DashboardPage = () => {
         </div>
         <div className="flex gap-3">
           <button className="btn-secondary py-2 px-4 text-sm">Download Report</button>
-          <button className="btn-primary py-2 px-4 text-sm">Retake Test</button>
+          <button
+            onClick={() => navigate("/assessment")}
+            className="btn-primary py-2 px-4 text-sm"
+          >
+            Retake Test
+          </button>
         </div>
       </header>
 
@@ -94,7 +114,7 @@ export const DashboardPage = () => {
           <div className="bg-primary p-8 text-white">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-primary-light bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                <span className="bg-white/90 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur shadow">
                   Primary Constitution
                 </span>
                 <h2 className="text-6xl font-black mt-4">{dominantDosha}</h2>
