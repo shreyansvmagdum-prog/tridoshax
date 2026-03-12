@@ -4,39 +4,45 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { DOSHA_INFO } from '../constants';
 import { Dosha } from '../types';
 import { AlertCircle, CheckCircle, Info, Utensils, Sparkles, Heart } from 'lucide-react';
+import { getLatestResult } from '../services/api';
 
 export const DashboardPage = () => {
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('lastAssessment');
+    const fetchDashboard = async () => {
+      try {
+        const data = await getLatestResult();
 
-    if (saved) {
-      const raw = JSON.parse(saved);
+        console.log("Dashboard API:", data);
 
-      // 🔥 Convert backend format → dashboard format
-      const formatted = {
-        scores: {
-          Vata: raw.vata_score,
-          Pitta: raw.pitta_score,
-          Kapha: raw.kapha_score
-        },
-        primary: raw.primary_dosha,
-        secondary: raw.secondary_dosha,
-        confidence: raw.confidence
-      };
+        const d = data.dosha;   // 👈 IMPORTANT
 
-      setResult(formatted);
+        const formatted = {
+          scores: {
+            Vata: d.vata_score,
+            Pitta: d.pitta_score,
+            Kapha: d.kapha_score
+          },
+          primary: d.primary,
+          secondary: d.secondary,
 
-    } else {
-      // fallback demo data
-      setResult({
-        scores: { Vata: 45, Pitta: 35, Kapha: 20 },
-        primary: "Vata",
-        secondary: "Pitta",
-        confidence: 45
-      });
-    }
+          // Backend has no confidence → calculate
+          confidence: Math.max(
+            d.vata_score,
+            d.pitta_score,
+            d.kapha_score
+          )
+        };
+
+        setResult(formatted);
+
+      } catch (err) {
+        console.error("Dashboard fetch failed:", err);
+      }
+    };
+
+    fetchDashboard();
   }, []);
 
   if (!result) return null;
@@ -164,7 +170,7 @@ export const DashboardPage = () => {
                 </div>
                 <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                   <div className={`h-full ${item.risk === 'High' ? 'bg-red-500 w-full' :
-                      item.risk === 'Medium' ? 'bg-orange-500 w-2/3' : 'bg-green-500 w-1/3'
+                    item.risk === 'Medium' ? 'bg-orange-500 w-2/3' : 'bg-green-500 w-1/3'
                     }`} />
                 </div>
               </div>
