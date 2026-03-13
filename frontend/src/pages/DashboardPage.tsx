@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle, Info, Utensils, Sparkles, Heart } from 'lucid
 import { getLatestResult } from '../services/api';
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import { downloadReport } from "../services/api";
 
 export const DashboardPage = () => {
   const [result, setResult] = useState<any>(null);
@@ -21,6 +22,7 @@ export const DashboardPage = () => {
     if (selectedAssessment) {
 
       const formatted = {
+        assessment_id: selectedAssessment.assessment_id,
         scores: {
           Vata: selectedAssessment.vata_score,
           Pitta: selectedAssessment.pitta_score,
@@ -42,6 +44,7 @@ export const DashboardPage = () => {
         const d = data.dosha;
 
         const formatted = {
+          assessment_id: d.assessment_id,
           scores: {
             Vata: d.vata_score,
             Pitta: d.pitta_score,
@@ -62,7 +65,7 @@ export const DashboardPage = () => {
     fetchDashboard();
 
   }, [location.state]);
-  
+
   if (!result) return null;
 
   const scores = result.scores;
@@ -86,6 +89,57 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleDownload = async () => {
+
+    if (!result?.assessment_id) {
+      alert("Report not ready yet");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Please login again");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/assessment/report/${result.assessment_id}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Error:", text);
+        alert("Download failed");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `TriDoshaX_Report_${result.assessment_id}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error(error);
+      alert("Download failed");
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -94,7 +148,13 @@ export const DashboardPage = () => {
           <p className="text-slate-500">Personalized analysis of your Ayurvedic constitution</p>
         </div>
         <div className="flex gap-3">
-          <button className="btn-secondary py-2 px-4 text-sm">Download Report</button>
+          <button
+            onClick={handleDownload}
+            //disabled={!result?.assessment_id}
+            className="btn-secondary py-2 px-4 text-sm disabled:opacity-50"
+          >
+            Download Report
+          </button>
           <button
             onClick={() => navigate("/assessment")}
             className="btn-primary py-2 px-4 text-sm"

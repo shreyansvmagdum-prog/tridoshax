@@ -19,3 +19,6 @@ Thumbs.db
 # Database files
 *.db
 *.sqlite3
+
+#PDF files
+backend/*.pdf
