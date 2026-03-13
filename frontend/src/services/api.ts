@@ -84,3 +84,16 @@ export const updateProfile = async (data: any) => {
   const response = await API.put("/auth/update-profile", data);
   return response.data;
 };
+
+export const downloadReport = async (assessmentId?: number) => {
+
+  const url = assessmentId
+    ? `/assessment/report/${assessmentId}`
+    : `/assessment/report`;
+
+  const response = await API.get(url, {
+    responseType: "blob"   // ⭐ IMPORTANT for files
+  });
+
+  return response.data;
+};
