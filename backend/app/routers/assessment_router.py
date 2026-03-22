@@ -9,7 +9,6 @@ from app.models import Result
 from app.recommendation import generate_recommendations
 from app.health_logic import calculate_bmi, generate_disease_risk
 from app.ml_model import predict_dosha, dosha_name
-from fastapi.responses import FileResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from fastapi import Depends, HTTPException
@@ -77,15 +76,46 @@ def submit_assessment(
 
     db.commit()
 
-    # 3️⃣ Prepare ML Features
-    mapping = {"A": 0, "B": 1, "C": 2}
-    features = [mapping.get(ans.selected_option) for ans in saved_answers]
+   # 3️⃣ Prepare ML Features
 
-    prediction = predict_dosha(features)
+    saved_answers.sort(key=lambda x: x.question_id)
+
+    # ⭐ Convert A/B/C → actual option text using questionnaire config
+    from app.questionnaire_config import QUESTIONNAIRE
+
+    option_text_map = {}
+
+    for section in QUESTIONNAIRE:
+        for q in section["questions"]:
+            qid = q["id"]
+            option_text_map[qid] = {
+                opt["key"]: opt["text"]
+                for opt in q["options"]
+            }
+
+    features = [
+        option_text_map[ans.question_id][ans.selected_option]
+        for ans in saved_answers
+    ]
+
+    # ⭐ UPDATED ML PREDICTION (returns prediction + confidence)
+    prediction, ml_confidence = predict_dosha(features)
     ml_primary_dosha = dosha_name(prediction)
 
-    # 4️⃣ Calculate Dosha Scores
+    # 4️⃣ Calculate Dosha Scores (Rule-based)
     scores = calculate_dosha_scores(saved_answers)
+
+    rule_primary = scores["primary"]
+    rule_secondary = scores["secondary"]
+    rule_confidence = scores["confidence"]
+
+    # ⭐ HYBRID DECISION LOGIC
+    if ml_confidence < 55:
+        final_primary = rule_primary
+        final_confidence = rule_confidence
+    else:
+        final_primary = ml_primary_dosha
+        final_confidence = ml_confidence
 
     # 5️⃣ Store Result in DB
     result = models.Result(
@@ -93,9 +123,9 @@ def submit_assessment(
         vata_score=scores["vata"],
         pitta_score=scores["pitta"],
         kapha_score=scores["kapha"],
-        primary_dosha=ml_primary_dosha,
-        secondary_dosha=scores["secondary"],
-        confidence=scores["confidence"]
+        primary_dosha=final_primary,
+        secondary_dosha=rule_secondary,
+        confidence=final_confidence
     )
 
     db.add(result)

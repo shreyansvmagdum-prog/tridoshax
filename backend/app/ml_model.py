@@ -1,26 +1,49 @@
 import joblib
 import numpy as np
+import os
 
-# Load trained model
-model = joblib.load("dosha_model.pkl")
 
-def predict_dosha(features):
+# ================= LOAD FILE PATHS =================
+
+BASE_DIR = os.path.dirname(__file__)
+
+model_path = os.path.join(BASE_DIR, "dosha_model.pkl")
+encoder_path = os.path.join(BASE_DIR, "encoder.pkl")
+label_path = os.path.join(BASE_DIR, "label_encoder.pkl")
+
+
+# ================= LOAD OBJECTS =================
+
+model = joblib.load(model_path)
+encoder = joblib.load(encoder_path)
+label_encoder = joblib.load(label_path)
+
+
+# ================= PREDICTION FUNCTION =================
+
+def predict_dosha(raw_answers):
     """
-    features: list of encoded questionnaire answers
+    raw_answers: list of answers ['A','B','C',...]
+    Returns: (prediction_index, confidence_percent)
     """
 
-    input_data = np.array(features).reshape(1, -1)
+    # Convert to 2D array
+    input_array = np.array(raw_answers).reshape(1, -1)
 
-    prediction = model.predict(input_data)
+    # Encode using SAME encoder as training
+    encoded_input = encoder.transform(input_array)
 
-    return int(prediction[0])
+    # Get probabilities
+    probabilities = model.predict_proba(encoded_input)[0]
 
-def dosha_name(prediction):
+    prediction_index = np.argmax(probabilities)
+    confidence = probabilities[prediction_index] * 100
 
-    mapping = {
-        0: "Vata",
-        1: "Pitta",
-        2: "Kapha"
-    }
+    return int(prediction_index), round(confidence, 2)
 
-    return mapping.get(prediction, "Unknown") 
+
+# ================= CLASS NAME FUNCTION =================
+
+def dosha_name(prediction_index):
+
+    return label_encoder.inverse_transform([prediction_index])[0]

@@ -100,6 +100,10 @@ export const QuestionnairePage = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
+      if (Object.keys(answers).length !== questions.length) {
+        alert("Please answer all questions before submitting.");
+        return;
+      }
       try {
         const formattedAnswers = Object.entries(answers).map(
           ([question_id, selected_option]) => ({
@@ -222,11 +226,10 @@ export const QuestionnairePage = () => {
                 onClick={() =>
                   handleOptionSelect(currentQuestion.id, option.value)
                 }
-                className={`w-full text-left p-6 rounded-2xl border-2 transition-all flex items-center justify-between ${
-                  answers[currentQuestion.id] === option.value
+                className={`w-full text-left p-6 rounded-2xl border-2 transition-all flex items-center justify-between ${answers[currentQuestion.id] === option.value
                     ? "border-primary bg-primary/5"
                     : "border-slate-100 hover:border-primary/30"
-                }`}
+                  }`}
               >
                 <span className="text-lg">{option.label}</span>
 
