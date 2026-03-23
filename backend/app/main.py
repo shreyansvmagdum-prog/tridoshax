@@ -3,6 +3,7 @@ from app.database import engine, Base
 from app.routers import auth_router
 from app.routers import assessment_router
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import app.models
 
 
@@ -30,3 +31,5 @@ def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+
+load_dotenv()
