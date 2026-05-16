@@ -18,7 +18,8 @@ export const Navbar = () => {
     ...(loggedIn
       ? [
         { name: 'Dashboard', path: '/dashboard' },
-        { name: 'Profile', path: '/profile' }
+        { name: 'Profile', path: '/profile' },
+        { name: 'AI Assistant', path: '/assistant' }
       ]
       : []),
   ];

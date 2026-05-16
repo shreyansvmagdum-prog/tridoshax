@@ -25,7 +25,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ type }) => {
       if (type === 'login') {
         const res = await loginUser(email, password);
 
-        // ⭐ Save JWT
+        // Save JWT
         localStorage.setItem("token", res.access_token);
 
         navigate("/dashboard");
