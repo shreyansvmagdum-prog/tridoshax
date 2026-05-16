@@ -3,6 +3,8 @@ from app.database import engine, Base
 from app.routers import auth_router
 from app.routers import assessment_router
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from app.routers import chat_router
 import app.models
 
 
@@ -23,6 +25,8 @@ app.include_router(auth_router.router)
 
 app.include_router(assessment_router.router)
 
+app.include_router(chat_router.router)
+
 @app.get("/")
 def root():
     return {"message": "Backend Working"}
@@ -30,3 +34,5 @@ def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+
+load_dotenv()

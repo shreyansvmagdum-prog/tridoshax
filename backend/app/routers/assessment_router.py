@@ -98,26 +98,30 @@ def submit_assessment(
         for ans in saved_answers
     ]
 
-    # ⭐ UPDATED ML PREDICTION (returns prediction + confidence)
+    #  UPDATED ML PREDICTION (returns prediction + confidence)
     prediction, ml_confidence = predict_dosha(features)
     ml_primary_dosha = dosha_name(prediction)
 
-    # 4️⃣ Calculate Dosha Scores (Rule-based)
+    #  Calculate Dosha Scores (Rule-based)
     scores = calculate_dosha_scores(saved_answers)
 
     rule_primary = scores["primary"]
     rule_secondary = scores["secondary"]
     rule_confidence = scores["confidence"]
 
-    # ⭐ HYBRID DECISION LOGIC
-    if ml_confidence < 55:
-        final_primary = rule_primary
-        final_confidence = rule_confidence
-    else:
+   #  FINAL HYBRID LOGIC (FIXED)
+
+    if ml_primary_dosha == rule_primary:
+        #  Agreement → safe
         final_primary = ml_primary_dosha
         final_confidence = ml_confidence
 
-    # 5️⃣ Store Result in DB
+    else:
+        #  Conflict → ALWAYS trust rule-based
+        final_primary = rule_primary
+        final_confidence = rule_confidence
+
+    #  Store Result in DB
     result = models.Result(
         assessment_id=new_assessment.id,
         vata_score=scores["vata"],
@@ -125,7 +129,7 @@ def submit_assessment(
         kapha_score=scores["kapha"],
         primary_dosha=final_primary,
         secondary_dosha=rule_secondary,
-        confidence=final_confidence
+        confidence=float(final_confidence)
     )
 
     db.add(result)

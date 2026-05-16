@@ -6,6 +6,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { QuestionnairePage } from './pages/QuestionnairePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
+import AIAssistantPage from "./pages/AIAssistantPage";
 import { AIAssistant } from './components/AIAssistant';
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -68,6 +69,15 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/assistant"
+              element={
+                <ProtectedRoute>
+                  <AIAssistantPage />
                 </ProtectedRoute>
               }
             />
